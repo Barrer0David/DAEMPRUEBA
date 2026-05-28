@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: daem_prueba_db
+    environment:
+      POSTGRES_DB: daem_prueba
+      POSTGRES_USER: daem_user
+      POSTGRES_PASSWORD: daem_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daem_user -d daem_prueba"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: daem_prueba_backend
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://daem_user:daem_pass@db:5432/daem_prueba
+      JWT_SECRET: supersecret_dev_only
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: daem_prueba_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000
+    depends_on:
+      - backend
+
+# Levantar todo: docker compose up --build
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:3000
+# DB:       localhost:5432 / daem_prueba / daem_user / daem_pass
